@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Insulation / Arc-Over Estimator (Clearance + Creepage)</title>
+  <style>
+    :root { --bg:#0b0f14; --panel:#121824; --panel2:#0f1520; --text:#e8eef7; --muted:#a9b4c4; --warn:#ffcf5c; --bad:#ff6b6b; --good:#6bffb1; --line:#243049; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
+    header { padding: 18px 18px 10px; border-bottom:1px solid var(--line); background: linear-gradient(180deg, #101827, #0b0f14); }
+    h1 { margin:0 0 6px; font-size: 20px; }
+    .sub { color:var(--muted); font-size: 13px; line-height: 1.35; max-width: 1100px; }
+    .wrap { padding: 14px 18px 28px; max-width: 1200px; margin:0 auto; }
+    .grid { display:grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 980px) { .grid { grid-template-columns: 1fr 1fr; } }
+    section { background:var(--panel); border:1px solid var(--line); border-radius: 12px; padding: 14px; }
+    section h2 { margin: 0 0 10px; font-size: 15px; }
+    .row { display:flex; gap:10px; flex-wrap: wrap; align-items:flex-end; margin: 10px 0; }
+    label { display:block; font-size: 12px; color:var(--muted); margin: 0 0 4px; }
+    input, select { background: var(--panel2); border:1px solid var(--line); border-radius: 10px; padding: 10px 10px; color: var(--text); min-width: 150px; outline:none; }
+    input[type="number"] { width: 150px; }
+    .small { min-width: 120px; width: 120px; }
+    .wide { min-width: 260px; width: 260px; }
+    .help { font-size: 12px; color: var(--muted); line-height: 1.35; margin-top: 8px; }
+    .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; border:1px solid var(--line); background: var(--panel2); margin-left: 8px; color: var(--muted); }
+    .warn { color: var(--warn); }
+    .bad { color: var(--bad); }
+    .good { color: var(--good); }
+    .kpi { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .card { background: var(--panel2); border:1px solid var(--line); border-radius: 12px; padding: 10px; }
+    .k { font-size: 12px; color: var(--muted); }
+    .v { font-size: 18px; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 10px; border:1px solid var(--line); }
+    th, td { padding: 8px 8px; border-bottom:1px solid var(--line); font-size: 12px; }
+    th { text-align:left; color: var(--muted); background: #0f1520; }
+    tr:last-child td { border-bottom:none; }
+    .note { font-size: 12px; color: var(--muted); line-height: 1.35; margin-top: 10px; }
+    .footer { margin-top: 12px; font-size: 12px; color: var(--muted); }
+    .btnrow { display:flex; gap:10px; flex-wrap: wrap; align-items:center; margin-top: 8px; }
+    button { background: #1a2640; border:1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px 12px; cursor:pointer; }
+    button:hover { filter: brightness(1.08); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Insulation / Arc-Over Estimator <span class="pill">clearance + creepage + layered dielectrics</span></h1>
+  <div class="sub">
+    This is a <span class="warn">screening tool</span> to explore insulation margins. It is <span class="bad">not</span> a substitute for standards compliance
+    (e.g., IEC/UL/IEEE), certified component ratings, or hipot/PD testing. High voltage can injure/kill and can start fires—treat every result here as
+    “order-of-magnitude + conservative assumptions required”.
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <section>
+      <h2>1) Applied Voltage (shared inputs)</h2>
+      <div class="row">
+        <div>
+          <label>Voltage</label>
+          <input id="vin" type="number" step="0.1" value="6" />
+        </div>
+        <div>
+          <label>Unit</label>
+          <select id="vunit">
+            <option value="kV" selected>kV</option>
+            <option value="V">V</option>
+          </select>
+        </div>
+        <div class="wide">
+          <label>Waveform</label>
+          <select id="vtype">
+            <option value="ac_rms" selected>AC (RMS)</option>
+            <option value="ac_peak">AC (peak)</option>
+            <option value="dc">DC</option>
+          </select>
+        </div>
+        <div class="small">
+          <label>Frequency (Hz)</label>
+          <input id="freq" type="number" step="1" value="60" />
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div class="card">
+          <div class="k">Peak voltage used for clearance breakdown</div>
+          <div class="v mono" id="vpeak_out">–</div>
+        </div>
+        <div class="card">
+          <div class="k">Working voltage used for creepage (RMS or DC)</div>
+          <div class="v mono" id="vwork_out">–</div>
+        </div>
+      </div>
+
+      <div class="btnrow">
+        <button id="btnExample">Load example: 6 kV RMS, 3 mm air gap, humid</button>
+        <button id="btnReset">Reset defaults</button>
+      </div>
+
+      <div class="help">
+        Tip: component “rated voltage” is defined under specific assumptions (pollution degree, CTI/material group, overvoltage category, altitude, insulation type).
+        Using a 1 kV-rated connector at 6 kV is almost always outside its certified insulation system—especially in humid/condensing environments.
+      </div>
+    </section>
+
+    <section>
+      <h2>2) Clearance (through-medium) breakdown estimate</h2>
+      <div class="row">
+        <div>
+          <label>Clearance gap (mm)</label>
+          <input id="gap" type="number" step="0.1" value="3" />
+        </div>
+        <div class="wide">
+          <label>Medium</label>
+          <select id="medium"></select>
+        </div>
+        <div class="wide" id="airMethodWrap">
+          <label>Air breakdown model</label>
+          <select id="airModel">
+            <option value="linear">Linear 3 kV/mm @ STP (simple)</option>
+            <option value="paschen">Paschen (parallel plates)</option>
+            <option value="min" selected>Conservative: min(linear, Paschen)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="small">
+          <label>Altitude (m)</label>
+          <input id="alt" type="number" step="100" value="0" />
+        </div>
+        <div class="small">
+          <label>Rel. humidity (%)</label>
+          <input id="rh" type="number" step="1" value="80" />
+        </div>
+        <div class="small">
+          <label>Geometry / defect factor</label>
+          <input id="kgeom" type="number" step="0.05" value="0.6" />
+        </div>
+        <div class="small">
+          <label>Env. derate factor</label>
+          <input id="kenv" type="number" step="0.05" value="0.85" />
+        </div>
+        <div class="small">
+          <label>Safety multiplier</label>
+          <input id="safety" type="number" step="0.1" value="2.0" />
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div class="card">
+          <div class="k">Estimated breakdown voltage (kV peak)</div>
+          <div class="v mono" id="vbreak_out">–</div>
+        </div>
+        <div class="card">
+          <div class="k">Margin (Vbreak / Vapplied_peak)</div>
+          <div class="v mono" id="margin_out">–</div>
+        </div>
+        <div class="card">
+          <div class="k">“Risk band” (qualitative)</div>
+          <div class="v" id="risk_out">–</div>
+        </div>
+        <div class="card">
+          <div class="k">Required clearance (mm) for safety multiplier</div>
+          <div class="v mono" id="reqgap_out">–</div>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="warn">Important:</span> “Geometry/defect factor” is where reality usually bites: edges, contaminants, voids, and partial discharge
+        can reduce breakdown far below textbook dielectric strength. If you don’t know, keep it conservative (e.g., 0.3–0.7).
+      </div>
+    </section>
+
+    <section>
+      <h2>3) Layered insulation stack (series dielectrics)</h2>
+      <div class="help">
+        If your insulation path is a <span class="mono">stack</span> (e.g., plastic + air gap + oil), the electric field does <em>not</em> distribute evenly.
+        The low-permittivity layer (often air/voids) can see a much higher field and fail first.
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Layer</th>
+            <th>Material</th>
+            <th>Thickness (mm)</th>
+            <th>εr (relative permittivity)</th>
+            <th>Dielectric strength (kV/mm)</th>
+          </tr>
+        </thead>
+        <tbody id="layersBody"></tbody>
+      </table>
+
+      <div class="kpi" style="margin-top:10px">
+        <div class="card">
+          <div class="k">Worst layer margin (Ebreak / Efield)</div>
+          <div class="v mono" id="layerMargin_out">–</div>
+        </div>
+        <div class="card">
+          <div class="k">First likely failure layer</div>
+          <div class="v" id="layerFail_out">–</div>
+        </div>
+      </div>
+
+      <div class="note">
+        This model assumes 1D series dielectrics (capacitors in series) and <span class="warn">uniform fields</span>.
+        Sharp edges, air bubbles, contamination, and surface tracking can still dominate.
+      </div>
+    </section>
+
+    <section>
+      <h2>4) Creepage (surface) “rule-of-thumb” estimator</h2>
+
+      <div class="row">
+        <div class="wide">
+          <label>Pollution severity (specific creepage distance)</label>
+          <select id="pollution">
+            <option value="16">Light / clean (16 mm/kV)</option>
+            <option value="20" selected>Medium (20 mm/kV)</option>
+            <option value="25">Heavy (25 mm/kV)</option>
+            <option value="31">Very heavy / wet (31 mm/kV)</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="small" id="pollCustomWrap" style="display:none">
+          <label>Custom mm/kV</label>
+          <input id="pollCustom" type="number" step="1" value="25" />
+        </div>
+
+        <div class="wide">
+          <label>Material group (CTI / tracking)</label>
+          <select id="cti">
+            <option value="I">Group I (CTI ≥ 600)</option>
+            <option value="II">Group II (400 ≤ CTI &lt; 600)</option>
+            <option value="IIIa" selected>Group IIIa (175 ≤ CTI &lt; 400)</option>
+            <option value="IIIb">Group IIIb (100 ≤ CTI &lt; 175)</option>
+            <option value="unknown">Unknown (assume worst)</option>
+          </select>
+        </div>
+
+        <div class="small">
+          <label>Your creepage distance (mm)</label>
+          <input id="creep" type="number" step="1" value="30" />
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div class="card">
+          <div class="k">Required creepage (mm)</div>
+          <div class="v mono" id="creepReq_out">–</div>
+        </div>
+        <div class="card">
+          <div class="k">Creepage margin (provided / required)</div>
+          <div class="v mono" id="creepMargin_out">–</div>
+        </div>
+      </div>
+
+      <div class="note">
+        This section uses IEC 60815-style “mm/kV” guidance (common for external insulators) plus a simple CTI multiplier.
+        For low-voltage equipment & certification, creepage/clearance should be taken from the applicable safety standard
+        (IEC 60664 / IEC 62368 / UL, etc.), not rules of thumb.
+      </div>
+    </section>
+  </div>
+
+  <div class="footer">
+    Built for offline use. Copy this file locally and open in a browser. No network calls.
+  </div>
+</div>
+
+<script>
+const MEDIA = {
+  air_dry:      { name: "Air (dry)",                 kind:"gas",   E: 3.0,  er: 1.0006 },
+  air_humid:    { name: "Air (humid/condensing)",    kind:"gas",   E: 3.0,  er: 1.0006 },
+  mineral_oil:  { name: "Mineral oil (transformer)", kind:"liquid",E: 12.0, er: 2.2 },
+  distilled_w:  { name: "Distilled/DI water (pure)", kind:"liquid",E: 67.0, er: 80.0 },
+  tap_w:        { name: "Tap water / wet dirt",      kind:"conductive", E: 0.2, er: 80.0 },
+  polycarb:     { name: "Polycarbonate (PC)",        kind:"solid", E: 20.0, er: 3.0 },
+  ptfe:         { name: "PTFE",                      kind:"solid", E: 60.0, er: 2.1 },
+  pvc:          { name: "PVC",                       kind:"solid", E: 16.0, er: 3.2 },
+  fr4:          { name: "FR-4 / epoxy glass",        kind:"solid", E: 20.0, er: 4.5 },
+  custom:       { name: "Custom…",                   kind:"custom",E: 10.0, er: 3.0 }
+};
+
+const ALT_TABLE = [
+  {m: 2000, kd: 1.00},
+  {m: 3000, kd: 1.14},
+  {m: 4000, kd: 1.29},
+  {m: 5000, kd: 1.48},
+  {m: 6000, kd: 1.70},
+  {m:10000, kd: 3.02}
+];
+
+const CTI_MULT = { "I":0.85, "II":0.95, "IIIa":1.00, "IIIb":1.10, "unknown":1.15 };
+
+const $ = (id) => document.getElementById(id);
+
+function fmt(x, digits=3){
+  if (!isFinite(x)) return "—";
+  const abs = Math.abs(x);
+  if (abs >= 1000) return x.toFixed(0);
+  if (abs >= 100) return x.toFixed(1);
+  if (abs >= 10) return x.toFixed(2);
+  return x.toFixed(digits);
+}
+
+function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
+
+function altitudeFactor_kd(alt_m){
+  const a = Math.max(0, alt_m);
+  if (a <= 2000) return 1.0;
+  let prev = ALT_TABLE[0];
+  for (let i=1;i<ALT_TABLE.length;i++){
+    const cur = ALT_TABLE[i];
+    if (a <= cur.m){
+      const t = (a - prev.m) / (cur.m - prev.m);
+      return prev.kd + t * (cur.kd - prev.kd);
+    }
+    prev = cur;
+  }
+  const last = ALT_TABLE[ALT_TABLE.length-1];
+  const last2 = ALT_TABLE[ALT_TABLE.length-2];
+  const slope = (last.kd - last2.kd) / (last.m - last2.m);
+  return last.kd + slope * (a - last.m);
+}
+
+function pressureFromAltitude_kPa(alt_m){
+  const h = clamp(alt_m, 0, 11000);
+  const p0 = 101.325;
+  const T0 = 288.15;
+  const L  = 0.0065;
+  const g  = 9.80665;
+  const M  = 0.0289644;
+  const R  = 8.3144598;
+  const exp = (g*M)/(R*L);
+  const p = p0 * Math.pow(1 - (L*h)/T0, exp);
+  return Math.max(0.5, p);
+}
+
+function paschenAir_kV(p_kPa, d_mm, gamma=0.01){
+  const A = 112.5;
+  const B = 2737.5;
+  const d_cm = d_mm / 10.0;
+  const pd = p_kPa * d_cm;
+  if (pd <= 0) return NaN;
+  const denom = Math.log(A*pd) - Math.log(Math.log(1 + 1/gamma));
+  if (denom <= 0) return NaN;
+  const V = (B * pd) / denom;
+  return V / 1000.0;
+}
+
+function humidityDerate(RH_percent){
+  const RH = clamp(RH_percent, 0, 100);
+  if (RH <= 50) return 1.0;
+  const t = (RH - 50) / 50;
+  return clamp(1.0 - 0.10*t, 0.85, 1.0);
+}
+
+function getVpeak_kV(){
+  const vin = parseFloat($("vin").value || "0");
+  const vunit = $("vunit").value;
+  const vtype = $("vtype").value;
+
+  let V = (vunit === "kV") ? vin : vin/1000.0;
+  if (!isFinite(V) || V < 0) V = 0;
+
+  if (vtype === "ac_rms") return V * Math.SQRT2;
+  if (vtype === "ac_peak") return V;
+  return V;
+}
+
+function getVwork_kV(){
+  const vin = parseFloat($("vin").value || "0");
+  const vunit = $("vunit").value;
+  const vtype = $("vtype").value;
+
+  let V = (vunit === "kV") ? vin : vin/1000.0;
+  if (!isFinite(V) || V < 0) V = 0;
+
+  if (vtype === "ac_peak") return V / Math.SQRT2;
+  return V;
+}
+
+function selectedMediumKey(){ return $("medium").value; }
+
+function vbreak_clearance_kV(gap_mm){
+  const key = selectedMediumKey();
+  const m = MEDIA[key];
+  const alt = parseFloat($("alt").value || "0");
+  const rh  = parseFloat($("rh").value || "50");
+  const kgeom = clamp(parseFloat($("kgeom").value || "1"), 0.01, 1.0);
+  const kenv  = clamp(parseFloat($("kenv").value  || "1"), 0.01, 1.0);
+
+  const d = Math.max(0, gap_mm);
+  if (d <= 0) return 0;
+
+  let Vbase_kV = 0;
+
+  if (m.kind === "gas"){
+    const kd = altitudeFactor_kd(alt);
+    const Vlinear = (m.E * d) / kd;
+    const p = pressureFromAltitude_kPa(alt);
+    const Vpaschen = paschenAir_kV(p, d, 0.01);
+    const airModel = $("airModel").value;
+    if (airModel === "linear") Vbase_kV = Vlinear;
+    else if (airModel === "paschen") Vbase_kV = Vpaschen;
+    else Vbase_kV = Math.min(Vlinear, Vpaschen);
+    Vbase_kV *= humidityDerate(rh);
+  } else {
+    Vbase_kV = m.E * d;
+  }
+
+  const V = Vbase_kV * kgeom * kenv;
+  return Math.max(0, V);
+}
+
+function solveGapForTarget_kV(target_kV){
+  const target = Math.max(0, target_kV);
+  if (target === 0) return 0;
+
+  let lo = 0.001;
+  let hi = 500.0;
+  for (let i=0;i<25;i++){
+    if (vbreak_clearance_kV(hi) >= target) break;
+    hi *= 1.5;
+    if (hi > 5000) break;
+  }
+
+  for (let i=0;i<50;i++){
+    const mid = 0.5*(lo+hi);
+    const vmid = vbreak_clearance_kV(mid);
+    if (!isFinite(vmid)) { hi = mid; continue; }
+    if (vmid >= target) hi = mid;
+    else lo = mid;
+  }
+  return hi;
+}
+
+function makeLayerRow(i){
+  const tr = document.createElement("tr");
+
+  const tdIdx = document.createElement("td");
+  tdIdx.textContent = (i+1).toString();
+  tr.appendChild(tdIdx);
+
+  const tdMat = document.createElement("td");
+  const sel = document.createElement("select");
+  sel.id = `Lmat${i}`;
+  sel.className = "wide";
+  for (const [k, v] of Object.entries(MEDIA)){
+    if (k === "custom") continue;
+    const opt = document.createElement("option");
+    opt.value = k;
+    opt.textContent = v.name;
+    sel.appendChild(opt);
+  }
+  const optC = document.createElement("option");
+  optC.value = "custom";
+  optC.textContent = MEDIA.custom.name;
+  sel.appendChild(optC);
+
+  sel.value = (i===0) ? "polycarb" : (i===1) ? "air_dry" : "mineral_oil";
+  tdMat.appendChild(sel);
+  tr.appendChild(tdMat);
+
+  const tdT = document.createElement("td");
+  const t = document.createElement("input");
+  t.id = `Lt${i}`;
+  t.type = "number";
+  t.step = "0.1";
+  t.value = (i===0) ? "1.0" : (i===1) ? "1.0" : "0.0";
+  tdT.appendChild(t);
+  tr.appendChild(tdT);
+
+  const tdEr = document.createElement("td");
+  const er = document.createElement("input");
+  er.id = `Ler${i}`;
+  er.type = "number";
+  er.step = "0.1";
+  er.value = fmt(MEDIA[sel.value].er, 2);
+  tdEr.appendChild(er);
+  tr.appendChild(tdEr);
+
+  const tdE = document.createElement("td");
+  const E = document.createElement("input");
+  E.id = `LE${i}`;
+  E.type = "number";
+  E.step = "0.5";
+  E.value = fmt(MEDIA[sel.value].E, 1);
+  tdE.appendChild(E);
+  tr.appendChild(tdE);
+
+  sel.addEventListener("change", () => {
+    const key = sel.value;
+    if (key === "custom"){
+      const newEr = parseFloat(prompt("Enter εr for Custom layer:", "3.0")) || 3.0;
+      const newE  = parseFloat(prompt("Enter dielectric strength (kV/mm) for Custom layer:", "10.0")) || 10.0;
+      er.value = fmt(newEr, 2);
+      E.value  = fmt(newE, 1);
+    } else {
+      er.value = fmt(MEDIA[key].er, 2);
+      E.value  = fmt(MEDIA[key].E, 1);
+    }
+    recalc();
+  });
+
+  [t, er, E].forEach(el => el.addEventListener("input", recalc));
+  return tr;
+}
+
+function getLayers(){
+  const layers = [];
+  for (let i=0;i<4;i++){
+    const key = $(`Lmat${i}`).value;
+    const thickness = parseFloat($(`Lt${i}`).value || "0");
+    const er = parseFloat($(`Ler${i}`).value || "1");
+    const E = parseFloat($(`LE${i}`).value || "0");
+    if (isFinite(thickness) && thickness > 0){
+      layers.push({
+        idx: i+1,
+        name: MEDIA[key]?.name ?? "Layer",
+        t_mm: thickness,
+        er: Math.max(0.1, er),
+        Ebreak: Math.max(0, E)
+      });
+    }
+  }
+  return layers;
+}
+
+function calcLayerStack(){
+  const Vpeak = getVpeak_kV();
+  const layers = getLayers();
+  if (layers.length === 0 || Vpeak <= 0){
+    return { layers: [], worstMargin: NaN, worstName: "—" };
+  }
+
+  const denom = layers.reduce((s, L) => s + (L.t_mm / L.er), 0);
+  if (denom <= 0) return { layers: [], worstMargin: NaN, worstName: "—" };
+
+  let worstMargin = Infinity;
+  let worstName = "—";
+
+  const outLayers = layers.map(L => {
+    const Efield = Vpeak / (L.er * denom);
+    const Vdrop  = Efield * L.t_mm;
+    const margin = (Efield > 0) ? (L.Ebreak / Efield) : Infinity;
+    if (margin < worstMargin){
+      worstMargin = margin;
+      worstName = `Layer ${L.idx}: ${L.name}`;
+    }
+    return { ...L, Efield, Vdrop, margin };
+  });
+
+  return { layers: outLayers, worstMargin, worstName };
+}
+
+function getSCD_mm_per_kV(){
+  const p = $("pollution").value;
+  if (p === "custom"){
+    return Math.max(1, parseFloat($("pollCustom").value || "25"));
+  }
+  return parseFloat(p);
+}
+
+function calcCreepage(){
+  const Vwork = getVwork_kV();
+  const scd = getSCD_mm_per_kV();
+  const cti = $("cti").value;
+  const mult = CTI_MULT[cti] ?? 1.15;
+  const req = Vwork * scd * mult;
+  const have = Math.max(0, parseFloat($("creep").value || "0"));
+  const margin = (req > 0) ? (have / req) : NaN;
+  return { req, have, margin };
+}
+
+function riskBand(margin){
+  if (!isFinite(margin)) return { text:"—", cls:"" };
+  if (margin >= 3) return { text:"Low (large margin)", cls:"good" };
+  if (margin >= 1.8) return { text:"Moderate", cls:"" };
+  if (margin >= 1.2) return { text:"High", cls:"warn" };
+  if (margin >= 1.0) return { text:"Very high (near inception)", cls:"warn" };
+  return { text:"Breakdown likely", cls:"bad" };
+}
+
+function recalc(){
+  const Vp = getVpeak_kV();
+  const Vw = getVwork_kV();
+  $("vpeak_out").textContent = `${fmt(Vp,2)} kVpk`;
+  $("vwork_out").textContent = `${fmt(Vw,2)} kV`;
+
+  const key = selectedMediumKey();
+  const kind = MEDIA[key]?.kind ?? "gas";
+  $("airMethodWrap").style.display = (kind === "gas") ? "block" : "none";
+
+  const gap = Math.max(0, parseFloat($("gap").value || "0"));
+  const Vbreak = vbreak_clearance_kV(gap);
+  const margin = (Vp > 0) ? (Vbreak / Vp) : NaN;
+  $("vbreak_out").textContent = `${fmt(Vbreak,2)} kVpk`;
+  $("margin_out").textContent = isFinite(margin) ? fmt(margin,2) : "—";
+  const rb = riskBand(margin);
+  $("risk_out").textContent = rb.text;
+  $("risk_out").className = `v ${rb.cls}`;
+
+  const safety = Math.max(1.0, parseFloat($("safety").value || "1"));
+  const target = Vp * safety;
+  const reqGap = solveGapForTarget_kV(target);
+  $("reqgap_out").textContent = `${fmt(reqGap,2)} mm`;
+
+  const L = calcLayerStack();
+  $("layerMargin_out").textContent = isFinite(L.worstMargin) ? fmt(L.worstMargin,2) : "—";
+  $("layerFail_out").textContent = L.worstName;
+
+  const C = calcCreepage();
+  $("creepReq_out").textContent = isFinite(C.req) ? `${fmt(C.req,1)} mm` : "—";
+  $("creepMargin_out").textContent = isFinite(C.margin) ? fmt(C.margin,2) : "—";
+}
+
+function populateMediumSelect(){
+  const sel = $("medium");
+  sel.innerHTML = "";
+  for (const [k,v] of Object.entries(MEDIA)){
+    const opt = document.createElement("option");
+    opt.value = k;
+    opt.textContent = v.name + (v.kind==="conductive" ? " (treat as conductive)" : "");
+    sel.appendChild(opt);
+  }
+  sel.value = "air_humid";
+}
+
+function populateLayers(){
+  const body = $("layersBody");
+  body.innerHTML = "";
+  for (let i=0;i<4;i++){
+    body.appendChild(makeLayerRow(i));
+  }
+}
+
+function bindInputs(){
+  ["vin","vunit","vtype","freq","gap","medium","airModel","alt","rh","kgeom","kenv","safety",
+   "pollution","pollCustom","cti","creep"].forEach(id => {
+    $(id).addEventListener("input", recalc);
+    $(id).addEventListener("change", recalc);
+  });
+
+  $("pollution").addEventListener("change", () => {
+    $("pollCustomWrap").style.display = ($("pollution").value === "custom") ? "block" : "none";
+  });
+
+  $("btnExample").addEventListener("click", () => {
+    $("vin").value = "6";
+    $("vunit").value = "kV";
+    $("vtype").value = "ac_rms";
+    $("freq").value = "60";
+    $("gap").value = "3";
+    $("medium").value = "air_humid";
+    $("airModel").value = "min";
+    $("alt").value = "0";
+    $("rh").value = "90";
+    $("kgeom").value = "0.6";
+    $("kenv").value = "0.8";
+    $("safety").value = "2.0";
+    $("pollution").value = "31";
+    $("cti").value = "IIIa";
+    $("creep").value = "30";
+    recalc();
+  });
+
+  $("btnReset").addEventListener("click", () => {
+    location.reload();
+  });
+}
+
+populateMediumSelect();
+populateLayers();
+bindInputs();
+recalc();
+</script>
+</body>
+</html>
