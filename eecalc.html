@@ -1,0 +1,1731 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EE Workbench Calculator</title>
+  <style>
+    :root {
+      --bg: #0f141b;
+      --panel: #151c25;
+      --panel-2: #1b2430;
+      --panel-3: #202b39;
+      --ink: #e9f1fb;
+      --muted: #9fb0c3;
+      --accent: #52d6b1;
+      --accent-2: #7ab7ff;
+      --warn: #ffd166;
+      --danger: #ff6b6b;
+      --border: #314050;
+      --shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      background:
+        radial-gradient(circle at top left, rgba(82, 214, 177, 0.12), transparent 32rem),
+        radial-gradient(circle at 90% 10%, rgba(122, 183, 255, 0.10), transparent 28rem),
+        var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    .app {
+      width: min(1500px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 24px 0 60px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: start;
+      margin-bottom: 18px;
+      padding: 24px;
+      border: 1px solid rgba(82, 214, 177, 0.22);
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(21, 28, 37, 0.96), rgba(27, 36, 48, 0.86));
+      box-shadow: var(--shadow);
+    }
+
+    h1, h2, h3 { margin: 0; }
+
+    h1 {
+      font-size: clamp(1.8rem, 3vw, 3.15rem);
+      letter-spacing: -0.04em;
+      line-height: 0.98;
+    }
+
+    .subtitle {
+      margin: 12px 0 0;
+      max-width: 80ch;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(122, 183, 255, 0.24);
+      background: rgba(122, 183, 255, 0.08);
+      color: #d6eaff;
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 0.85rem;
+    }
+
+    .badge::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(82, 214, 177, 0.12);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 235px;
+    }
+
+    button, select, input, textarea {
+      font: inherit;
+    }
+
+    .tool-button, .tab-button {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--ink);
+      border-radius: 12px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    }
+
+    .tool-button:hover, .tab-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(82, 214, 177, 0.55);
+      background: var(--panel-3);
+    }
+
+    .tool-button.primary {
+      background: linear-gradient(135deg, rgba(82, 214, 177, 0.24), rgba(122, 183, 255, 0.15));
+      border-color: rgba(82, 214, 177, 0.45);
+    }
+
+    .precision-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .precision-row select {
+      width: 100%;
+      background: var(--panel-2);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 10px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 2px 12px;
+      margin-bottom: 12px;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .tab-button {
+      white-space: nowrap;
+      color: var(--muted);
+      background: rgba(21, 28, 37, 0.82);
+    }
+
+    .tab-button.active {
+      color: var(--ink);
+      border-color: rgba(82, 214, 177, 0.72);
+      background: linear-gradient(135deg, rgba(82, 214, 177, 0.18), rgba(122, 183, 255, 0.10));
+      box-shadow: 0 8px 28px rgba(82, 214, 177, 0.08);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 18px 0 12px;
+    }
+
+    .section-head h2 {
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-head p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+    }
+
+    .card {
+      grid-column: span 6;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(21, 28, 37, 0.93);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+      overflow: hidden;
+    }
+
+    .card.wide { grid-column: span 12; }
+    .card.third { grid-column: span 4; }
+
+    .card-header {
+      padding: 16px 16px 10px;
+      border-bottom: 1px solid rgba(49, 64, 80, 0.7);
+      background: linear-gradient(180deg, rgba(255,255,255,0.025), transparent);
+    }
+
+    .card-header h3 {
+      font-size: 1.03rem;
+      letter-spacing: -0.01em;
+    }
+
+    .card-header p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .card-body {
+      padding: 16px;
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 11px 12px;
+      align-items: end;
+    }
+
+    .input-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .input-grid.one { grid-template-columns: 1fr; }
+
+    label.field {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .field .entry {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px;
+    }
+
+    input, textarea, select.unit, select.mode {
+      width: 100%;
+      min-width: 0;
+      background: #101821;
+      color: var(--ink);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      outline: none;
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    input, select.unit, select.mode {
+      height: 39px;
+      padding: 9px 10px;
+    }
+
+    textarea {
+      min-height: 78px;
+      resize: vertical;
+      padding: 10px;
+      line-height: 1.45;
+      font-family: var(--mono);
+    }
+
+    select.unit {
+      width: auto;
+      min-width: 74px;
+      color: #dcecff;
+      background: #0f1720;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: rgba(82, 214, 177, 0.8);
+      box-shadow: 0 0 0 3px rgba(82, 214, 177, 0.11);
+    }
+
+    .result-box {
+      margin-top: 14px;
+      border: 1px solid rgba(82, 214, 177, 0.18);
+      background: rgba(82, 214, 177, 0.045);
+      border-radius: 13px;
+      overflow: hidden;
+    }
+
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    .result-table th, .result-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid rgba(49, 64, 80, 0.55);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .result-table tr:last-child th,
+    .result-table tr:last-child td { border-bottom: 0; }
+
+    .result-table th {
+      color: var(--muted);
+      font-weight: 600;
+      width: 38%;
+    }
+
+    .result-table td:nth-child(2) {
+      font-family: var(--mono);
+      color: #f7fbff;
+      white-space: nowrap;
+    }
+
+    .result-table td.note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-family: var(--sans);
+      white-space: normal;
+    }
+
+    .empty {
+      padding: 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    details.equations {
+      margin-top: 12px;
+      border-top: 1px dashed rgba(159, 176, 195, 0.28);
+      padding-top: 10px;
+      color: var(--muted);
+    }
+
+    details.equations summary {
+      cursor: pointer;
+      color: #cce3f8;
+      font-weight: 650;
+      font-size: 0.88rem;
+    }
+
+    .eq {
+      margin: 10px 0 0;
+      display: grid;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 0.86rem;
+      line-height: 1.45;
+      color: #dce6f0;
+    }
+
+    .eq span {
+      display: block;
+      padding: 7px 9px;
+      border-radius: 9px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.055);
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.45;
+      margin-top: 10px;
+    }
+
+    .small-warning {
+      color: var(--warn);
+    }
+
+    footer {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.5;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      background: rgba(21, 28, 37, 0.78);
+    }
+
+    @media (max-width: 1050px) {
+      .card, .card.third { grid-column: span 12; }
+      .hero { grid-template-columns: 1fr; }
+      .toolbar { min-width: 0; flex-direction: row; flex-wrap: wrap; }
+      .precision-row { min-width: 210px; }
+    }
+
+    @media (max-width: 700px) {
+      .app { width: min(100% - 18px, 1500px); padding-top: 10px; }
+      .hero { padding: 18px; }
+      .input-grid, .input-grid.three { grid-template-columns: 1fr; }
+      .field .entry { grid-template-columns: minmax(0, 1fr) minmax(74px, auto); }
+      .section-head { align-items: start; flex-direction: column; }
+      .result-table th, .result-table td { display: block; width: 100%; border-bottom: 0; padding-bottom: 4px; }
+      .result-table tr { display: block; padding: 7px 0; border-bottom: 1px solid rgba(49,64,80,0.55); }
+      .result-table tr:last-child { border-bottom: 0; }
+      .toolbar { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <h1>EE Workbench Calculator</h1>
+        <p class="subtitle">A single-file electrical engineering calculator for bench, schematic, PCB, signal-chain, and power work. Inputs accept plain numbers or engineering suffixes such as <strong>10k</strong>, <strong>4.7u</strong>, <strong>100n</strong>, and <strong>2.2M</strong>.</p>
+        <div class="badges" aria-label="tool features">
+          <span class="badge">No external dependencies</span>
+          <span class="badge">Auto recalculates</span>
+          <span class="badge">Equations shown under every section</span>
+          <span class="badge">Engineering notation output</span>
+        </div>
+      </div>
+      <div class="toolbar" aria-label="tool controls">
+        <button class="tool-button primary" id="copyResults" type="button">Copy active tab results</button>
+        <button class="tool-button" id="clearTab" type="button">Clear active tab inputs</button>
+        <label class="precision-row">Precision
+          <select id="precision" aria-label="display precision">
+            <option value="3">3 sig figs</option>
+            <option value="4" selected>4 sig figs</option>
+            <option value="5">5 sig figs</option>
+            <option value="6">6 sig figs</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="calculator categories">
+      <button class="tab-button active" type="button" data-tab="dc">DC & Passives</button>
+      <button class="tab-button" type="button" data-tab="reactance">Reactance & Impedance</button>
+      <button class="tab-button" type="button" data-tab="filters">Filters & Timing</button>
+      <button class="tab-button" type="button" data-tab="signals">Signals & dB</button>
+      <button class="tab-button" type="button" data-tab="opamps">Op-Amps</button>
+      <button class="tab-button" type="button" data-tab="power">Power & Energy</button>
+      <button class="tab-button" type="button" data-tab="pcb">PCB, RF & Digital</button>
+    </nav>
+
+    <section class="tab-panel active" id="tab-dc">
+      <div class="section-head">
+        <div>
+          <h2>DC & Passive Networks</h2>
+          <p>Ohm’s law, resistor networks, dividers, and loading checks.</p>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <div class="card-header">
+            <h3>Ohm’s Law Solver</h3>
+            <p>Enter any two of voltage, current, and resistance. Leave the unknown blank.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid three">
+              <label class="field">Voltage V
+                <span class="entry"><input id="ohm_v" value="5" inputmode="decimal"><select class="unit" id="ohm_v_unit"><option value="1">V</option><option value="1e-3">mV</option><option value="1e3">kV</option></select></span>
+              </label>
+              <label class="field">Current I
+                <span class="entry"><input id="ohm_i" inputmode="decimal"><select class="unit" id="ohm_i_unit"><option value="1">A</option><option value="1e-3" selected>mA</option><option value="1e-6">µA</option><option value="1e-9">nA</option></select></span>
+              </label>
+              <label class="field">Resistance R
+                <span class="entry"><input id="ohm_r" value="1" inputmode="decimal"><select class="unit" id="ohm_r_unit"><option value="1">Ω</option><option value="1e3" selected>kΩ</option><option value="1e6">MΩ</option><option value="1e-3">mΩ</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="ohm_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>V = I · R</span>
+                <span>I = V / R</span>
+                <span>R = V / I</span>
+                <span>P = V · I = I² · R = V² / R</span>
+              </div>
+            </details>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h3>Voltage Divider & Load Effect</h3>
+            <p>Checks divider output with and without a load attached to the lower leg.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Input voltage Vin
+                <span class="entry"><input id="div_vin" value="12" inputmode="decimal"><select class="unit" id="div_vin_unit"><option value="1">V</option><option value="1e-3">mV</option><option value="1e3">kV</option></select></span>
+              </label>
+              <label class="field">Top resistor R1
+                <span class="entry"><input id="div_r1" value="10" inputmode="decimal"><select class="unit" id="div_r1_unit"><option value="1">Ω</option><option value="1e3" selected>kΩ</option><option value="1e6">MΩ</option></select></span>
+              </label>
+              <label class="field">Bottom resistor R2
+                <span class="entry"><input id="div_r2" value="4.7" inputmode="decimal"><select class="unit" id="div_r2_unit"><option value="1">Ω</option><option value="1e3" selected>kΩ</option><option value="1e6">MΩ</option></select></span>
+              </label>
+              <label class="field">Load resistance RL optional
+                <span class="entry"><input id="div_rl" value="100" inputmode="decimal"><select class="unit" id="div_rl_unit"><option value="1">Ω</option><option value="1e3" selected>kΩ</option><option value="1e6">MΩ</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="divider_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>Vout = Vin · R2 / (R1 + R2)</span>
+                <span>Rlower,loaded = R2 ∥ RL = 1 / (1/R2 + 1/RL)</span>
+                <span>Vout,loaded = Vin · Rlower,loaded / (R1 + Rlower,loaded)</span>
+                <span>Rth = R1 ∥ R2,  Ith = Vout / Rth</span>
+              </div>
+            </details>
+          </div>
+        </article>
+
+        <article class="card wide">
+          <div class="card-header">
+            <h3>Series / Parallel Resistor Network</h3>
+            <p>Paste a list of values separated by commas, spaces, or new lines. SI suffixes are accepted.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid one">
+              <label class="field">Resistor values in ohms or with suffixes
+                <textarea id="rnet_values">10k, 4.7k, 2.2k, 330</textarea>
+              </label>
+            </div>
+            <div class="result-box" id="rnet_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>Rseries = Σ Ri</span>
+                <span>Rparallel = 1 / Σ(1/Ri)</span>
+                <span>Conductance G = 1 / R</span>
+              </div>
+            </details>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-reactance">
+      <div class="section-head">
+        <div>
+          <h2>Reactance & Impedance</h2>
+          <p>Capacitive and inductive reactance, series RLC impedance, phase, resonance, and Q.</p>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <div class="card-header">
+            <h3>Capacitive / Inductive Reactance</h3>
+            <p>Compute reactance at a given frequency and view time constants when R is supplied.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Frequency f
+                <span class="entry"><input id="x_f" value="10" inputmode="decimal"><select class="unit" id="x_f_unit"><option value="1">Hz</option><option value="1e3" selected>kHz</option><option value="1e6">MHz</option><option value="1e9">GHz</option></select></span>
+              </label>
+              <label class="field">Resistance R optional
+                <span class="entry"><input id="x_r" value="1" inputmode="decimal"><select class="unit" id="x_r_unit"><option value="1">Ω</option><option value="1e3" selected>kΩ</option><option value="1e6">MΩ</option></select></span>
+              </label>
+              <label class="field">Capacitance C
+                <span class="entry"><input id="x_c" value="100" inputmode="decimal"><select class="unit" id="x_c_unit"><option value="1">F</option><option value="1e-3">mF</option><option value="1e-6">µF</option><option value="1e-9" selected>nF</option><option value="1e-12">pF</option></select></span>
+              </label>
+              <label class="field">Inductance L
+                <span class="entry"><input id="x_l" value="10" inputmode="decimal"><select class="unit" id="x_l_unit"><option value="1">H</option><option value="1e-3">mH</option><option value="1e-6" selected>µH</option><option value="1e-9">nH</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="reactance_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>ω = 2πf</span>
+                <span>Xc = -1 / (ωC); magnitude |Xc| = 1 / (2πfC)</span>
+                <span>XL = ωL = 2πfL</span>
+                <span>τRC = R · C,  τRL = L / R</span>
+              </div>
+            </details>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h3>Series RLC Impedance</h3>
+            <p>Find total impedance, phase angle, RMS current, and resonance for a series RLC branch.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Frequency f
+                <span class="entry"><input id="rlc_f" value="1" inputmode="decimal"><select class="unit" id="rlc_f_unit"><option value="1">Hz</option><option value="1e3" selected>kHz</option><option value="1e6">MHz</option></select></span>
+              </label>
+              <label class="field">RMS source voltage optional
+                <span class="entry"><input id="rlc_v" value="5" inputmode="decimal"><select class="unit" id="rlc_v_unit"><option value="1">V</option><option value="1e-3">mV</option><option value="1e3">kV</option></select></span>
+              </label>
+              <label class="field">Series resistance R
+                <span class="entry"><input id="rlc_r" value="100" inputmode="decimal"><select class="unit" id="rlc_r_unit"><option value="1" selected>Ω</option><option value="1e3">kΩ</option><option value="1e6">MΩ</option></select></span>
+              </label>
+              <label class="field">Inductance L
+                <span class="entry"><input id="rlc_l" value="10" inputmode="decimal"><select class="unit" id="rlc_l_unit"><option value="1">H</option><option value="1e-3" selected>mH</option><option value="1e-6">µH</option><option value="1e-9">nH</option></select></span>
+              </label>
+              <label class="field">Capacitance C
+                <span class="entry"><input id="rlc_c" value="1" inputmode="decimal"><select class="unit" id="rlc_c_unit"><option value="1">F</option><option value="1e-3">mF</option><option value="1e-6" selected>µF</option><option value="1e-9">nF</option><option value="1e-12">pF</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="rlc_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>Z = R + j(ωL − 1/(ωC))</span>
+                <span>|Z| = √(R² + (XL − XC)²)</span>
+                <span>φ = atan((XL − XC) / R)</span>
+                <span>Irms = Vrms / |Z|</span>
+                <span>f0 = 1 / (2π√(LC)),  Qseries = ω0L / R = 1 / (ω0CR)</span>
+              </div>
+            </details>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-filters">
+      <div class="section-head">
+        <div>
+          <h2>Filters & Timing</h2>
+          <p>First-order RC/RL filters, series RLC band-pass behavior, and 555 astable timing.</p>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <div class="card-header">
+            <h3>RC and RL First-Order Filters</h3>
+            <p>Calculates cutoff, gain, dB, and phase at a test frequency.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Test frequency f
+                <span class="entry"><input id="filter_f" value="1" inputmode="decimal"><select class="unit" id="filter_f_unit"><option value="1">Hz</option><option value="1e3" selected>kHz</option><option value="1e6">MHz</option></select></span>
+              </label>
+              <label class="field">Resistance R
+                <span class="entry"><input id="filter_r" value="10" inputmode="decimal"><select class="unit" id="filter_r_unit"><option value="1">Ω</option><option value="1e3" selected>kΩ</option><option value="1e6">MΩ</option></select></span>
+              </label>
+              <label class="field">Capacitance C for RC
+                <span class="entry"><input id="filter_c" value="10" inputmode="decimal"><select class="unit" id="filter_c_unit"><option value="1">F</option><option value="1e-3">mF</option><option value="1e-6">µF</option><option value="1e-9" selected>nF</option><option value="1e-12">pF</option></select></span>
+              </label>
+              <label class="field">Inductance L for RL
+                <span class="entry"><input id="filter_l" value="10" inputmode="decimal"><select class="unit" id="filter_l_unit"><option value="1">H</option><option value="1e-3" selected>mH</option><option value="1e-6">µH</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="filter_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>RC cutoff: fc = 1 / (2πRC),  τ = RC</span>
+                <span>RL cutoff: fc = R / (2πL),  τ = L/R</span>
+                <span>|HLP| = 1 / √(1 + (f/fc)²)</span>
+                <span>|HHP| = (f/fc) / √(1 + (f/fc)²)</span>
+                <span>Gain dB = 20 log10(|H|)</span>
+              </div>
+            </details>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h3>Series RLC Band-Pass</h3>
+            <p>Models output taken across R in a series RLC network.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Test frequency f
+                <span class="entry"><input id="bp_f" value="10" inputmode="decimal"><select class="unit" id="bp_f_unit"><option value="1">Hz</option><option value="1e3" selected>kHz</option><option value="1e6">MHz</option></select></span>
+              </label>
+              <label class="field">Series R
+                <span class="entry"><input id="bp_r" value="25" inputmode="decimal"><select class="unit" id="bp_r_unit"><option value="1" selected>Ω</option><option value="1e3">kΩ</option></select></span>
+              </label>
+              <label class="field">Inductance L
+                <span class="entry"><input id="bp_l" value="10" inputmode="decimal"><select class="unit" id="bp_l_unit"><option value="1">H</option><option value="1e-3" selected>mH</option><option value="1e-6">µH</option></select></span>
+              </label>
+              <label class="field">Capacitance C
+                <span class="entry"><input id="bp_c" value="22" inputmode="decimal"><select class="unit" id="bp_c_unit"><option value="1">F</option><option value="1e-6">µF</option><option value="1e-9" selected>nF</option><option value="1e-12">pF</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="bp_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>H(jω) = R / (R + j(ωL − 1/(ωC)))</span>
+                <span>f0 = 1 / (2π√(LC))</span>
+                <span>Q = ω0L / R</span>
+                <span>Bandwidth BW = f0 / Q</span>
+                <span>|H| = R / √(R² + (XL − XC)²)</span>
+              </div>
+            </details>
+          </div>
+        </article>
+
+        <article class="card wide">
+          <div class="card-header">
+            <h3>555 Astable Timer</h3>
+            <p>Quick timing calculator for the classic bipolar/CMOS 555 astable configuration.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid three">
+              <label class="field">RA
+                <span class="entry"><input id="t555_ra" value="10" inputmode="decimal"><select class="unit" id="t555_ra_unit"><option value="1">Ω</option><option value="1e3" selected>kΩ</option><option value="1e6">MΩ</option></select></span>
+              </label>
+              <label class="field">RB
+                <span class="entry"><input id="t555_rb" value="100" inputmode="decimal"><select class="unit" id="t555_rb_unit"><option value="1">Ω</option><option value="1e3" selected>kΩ</option><option value="1e6">MΩ</option></select></span>
+              </label>
+              <label class="field">Timing capacitor C
+                <span class="entry"><input id="t555_c" value="10" inputmode="decimal"><select class="unit" id="t555_c_unit"><option value="1">F</option><option value="1e-6" selected>µF</option><option value="1e-9">nF</option><option value="1e-12">pF</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="t555_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>tHIGH = 0.693 · (RA + RB) · C</span>
+                <span>tLOW = 0.693 · RB · C</span>
+                <span>T = tHIGH + tLOW = 0.693 · (RA + 2RB) · C</span>
+                <span>f = 1 / T</span>
+                <span>Duty = tHIGH / T = (RA + RB) / (RA + 2RB)</span>
+              </div>
+            </details>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-signals">
+      <div class="section-head">
+        <div>
+          <h2>Signals & Decibels</h2>
+          <p>dB, dBm, RMS/peak conversions, and sine-wave reference values.</p>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <div class="card-header">
+            <h3>Voltage / Power dB Calculator</h3>
+            <p>Calculate ratios, dBV/dBu/dBm, and convert dBm into voltage for a resistive load.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Input voltage V1
+                <span class="entry"><input id="db_v1" value="1" inputmode="decimal"><select class="unit" id="db_v1_unit"><option value="1" selected>Vrms</option><option value="1e-3">mVrms</option></select></span>
+              </label>
+              <label class="field">Output voltage V2
+                <span class="entry"><input id="db_v2" value="2" inputmode="decimal"><select class="unit" id="db_v2_unit"><option value="1" selected>Vrms</option><option value="1e-3">mVrms</option></select></span>
+              </label>
+              <label class="field">Load impedance R
+                <span class="entry"><input id="db_r" value="50" inputmode="decimal"><select class="unit" id="db_r_unit"><option value="1" selected>Ω</option><option value="1e3">kΩ</option></select></span>
+              </label>
+              <label class="field">dBm to convert
+                <span class="entry"><input id="db_dbm" value="10" inputmode="decimal"><select class="unit" id="db_dbm_unit"><option value="1" selected>dBm</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="db_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>dBvoltage = 20 log10(V2 / V1)</span>
+                <span>P = Vrms² / R</span>
+                <span>dBm = 10 log10(P / 1 mW)</span>
+                <span>dBV = 20 log10(Vrms / 1 V)</span>
+                <span>dBu = 20 log10(Vrms / 0.775 V)</span>
+                <span>Vrms from dBm = √(R · 0.001 · 10^(dBm/10))</span>
+              </div>
+            </details>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h3>Sine Wave Peak / RMS / P-P</h3>
+            <p>Pick one known amplitude and convert to common sine-wave values.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Known quantity
+                <select class="mode" id="sig_mode">
+                  <option value="vpp" selected>Vpp</option>
+                  <option value="vp">Vpeak</option>
+                  <option value="vrms">Vrms</option>
+                </select>
+              </label>
+              <label class="field">Value
+                <span class="entry"><input id="sig_value" value="3.3" inputmode="decimal"><select class="unit" id="sig_value_unit"><option value="1" selected>V</option><option value="1e-3">mV</option><option value="1e3">kV</option></select></span>
+              </label>
+              <label class="field">Load R optional
+                <span class="entry"><input id="sig_r" value="50" inputmode="decimal"><select class="unit" id="sig_r_unit"><option value="1" selected>Ω</option><option value="1e3">kΩ</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="sig_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>Vpp = 2 · Vpeak</span>
+                <span>Vrms = Vpeak / √2</span>
+                <span>Vavg,rectified = 2 · Vpeak / π</span>
+                <span>Pavg = Vrms² / R</span>
+              </div>
+            </details>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-opamps">
+      <div class="section-head">
+        <div>
+          <h2>Op-Amps</h2>
+          <p>Closed-loop gain, output estimates, and gain-bandwidth checks.</p>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card wide">
+          <div class="card-header">
+            <h3>Inverting / Non-Inverting Gain</h3>
+            <p>Uses the same feedback and input/ground resistor values to compare common op-amp configurations.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid three">
+              <label class="field">Feedback resistor Rf
+                <span class="entry"><input id="op_rf" value="100" inputmode="decimal"><select class="unit" id="op_rf_unit"><option value="1">Ω</option><option value="1e3" selected>kΩ</option><option value="1e6">MΩ</option></select></span>
+              </label>
+              <label class="field">Input / ground resistor Rin or Rg
+                <span class="entry"><input id="op_rg" value="10" inputmode="decimal"><select class="unit" id="op_rg_unit"><option value="1">Ω</option><option value="1e3" selected>kΩ</option><option value="1e6">MΩ</option></select></span>
+              </label>
+              <label class="field">Input voltage Vin
+                <span class="entry"><input id="op_vin" value="100" inputmode="decimal"><select class="unit" id="op_vin_unit"><option value="1">V</option><option value="1e-3" selected>mV</option><option value="1e-6">µV</option></select></span>
+              </label>
+              <label class="field">Op-amp GBW optional
+                <span class="entry"><input id="op_gbw" value="10" inputmode="decimal"><select class="unit" id="op_gbw_unit"><option value="1">Hz</option><option value="1e3">kHz</option><option value="1e6" selected>MHz</option><option value="1e9">GHz</option></select></span>
+              </label>
+              <label class="field">Slew rate optional
+                <span class="entry"><input id="op_slew" value="5" inputmode="decimal"><select class="unit" id="op_slew_unit"><option value="1e6" selected>V/µs</option><option value="1e3">V/ms</option><option value="1">V/s</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="opamp_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>Inverting gain: Av = −Rf / Rin</span>
+                <span>Non-inverting gain: Av = 1 + Rf / Rg</span>
+                <span>Inverting noise gain = 1 + Rf / Rin</span>
+                <span>Closed-loop bandwidth ≈ GBW / noise gain</span>
+                <span>Full-power bandwidth ≈ SlewRate / (2π · Vpeak,out)</span>
+              </div>
+            </details>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-power">
+      <div class="section-head">
+        <div>
+          <h2>Power & Energy</h2>
+          <p>Capacitor/inductor energy, rough switching supply sizing, and transformer ratios.</p>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <div class="card-header">
+            <h3>Capacitor / Inductor Energy</h3>
+            <p>Useful for hold-up, snubbers, pulse loads, and energy storage sanity checks.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Capacitance C
+                <span class="entry"><input id="energy_c" value="470" inputmode="decimal"><select class="unit" id="energy_c_unit"><option value="1">F</option><option value="1e-3">mF</option><option value="1e-6" selected>µF</option><option value="1e-9">nF</option></select></span>
+              </label>
+              <label class="field">Capacitor voltage V
+                <span class="entry"><input id="energy_v" value="24" inputmode="decimal"><select class="unit" id="energy_v_unit"><option value="1" selected>V</option><option value="1e-3">mV</option><option value="1e3">kV</option></select></span>
+              </label>
+              <label class="field">Inductance L
+                <span class="entry"><input id="energy_l" value="47" inputmode="decimal"><select class="unit" id="energy_l_unit"><option value="1">H</option><option value="1e-3">mH</option><option value="1e-6" selected>µH</option></select></span>
+              </label>
+              <label class="field">Inductor current I
+                <span class="entry"><input id="energy_i" value="3" inputmode="decimal"><select class="unit" id="energy_i_unit"><option value="1" selected>A</option><option value="1e-3">mA</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="energy_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>EC = 1/2 · C · V²</span>
+                <span>EL = 1/2 · L · I²</span>
+                <span>Charge Q = C · V</span>
+              </div>
+            </details>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h3>Buck / Boost Converter Rough Sizing</h3>
+            <p>Ideal CCM estimates for duty cycle, inductor ripple, capacitor ripple, and input current.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Topology
+                <select class="mode" id="sw_mode"><option value="buck" selected>Buck</option><option value="boost">Boost</option></select>
+              </label>
+              <label class="field">Switching frequency fsw
+                <span class="entry"><input id="sw_f" value="500" inputmode="decimal"><select class="unit" id="sw_f_unit"><option value="1">Hz</option><option value="1e3" selected>kHz</option><option value="1e6">MHz</option></select></span>
+              </label>
+              <label class="field">Input voltage Vin
+                <span class="entry"><input id="sw_vin" value="24" inputmode="decimal"><select class="unit" id="sw_vin_unit"><option value="1" selected>V</option><option value="1e-3">mV</option></select></span>
+              </label>
+              <label class="field">Output voltage Vout
+                <span class="entry"><input id="sw_vout" value="5" inputmode="decimal"><select class="unit" id="sw_vout_unit"><option value="1" selected>V</option><option value="1e-3">mV</option></select></span>
+              </label>
+              <label class="field">Output current Iout
+                <span class="entry"><input id="sw_iout" value="2" inputmode="decimal"><select class="unit" id="sw_iout_unit"><option value="1" selected>A</option><option value="1e-3">mA</option></select></span>
+              </label>
+              <label class="field">Inductance L
+                <span class="entry"><input id="sw_l" value="10" inputmode="decimal"><select class="unit" id="sw_l_unit"><option value="1">H</option><option value="1e-3">mH</option><option value="1e-6" selected>µH</option></select></span>
+              </label>
+              <label class="field">Output capacitor C
+                <span class="entry"><input id="sw_c" value="47" inputmode="decimal"><select class="unit" id="sw_c_unit"><option value="1">F</option><option value="1e-3">mF</option><option value="1e-6" selected>µF</option><option value="1e-9">nF</option></select></span>
+              </label>
+              <label class="field">Efficiency η
+                <span class="entry"><input id="sw_eff" value="90" inputmode="decimal"><select class="unit" id="sw_eff_unit"><option value="0.01" selected>%</option><option value="1">ratio</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="switcher_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>Buck: D ≈ Vout / Vin,  ΔIL ≈ (Vin − Vout)D / (Lfsw)</span>
+                <span>Buck: ΔVout ≈ ΔIL / (8fswC)</span>
+                <span>Boost: D ≈ 1 − Vin / Vout,  ΔIL ≈ VinD / (Lfsw)</span>
+                <span>Boost: ΔVout ≈ IoutD / (fswC)</span>
+                <span>Input current estimate: Iin ≈ (VoutIout) / (ηVin)</span>
+              </div>
+            </details>
+            <p class="hint small-warning">These are first-pass ideal CCM estimates. Check controller datasheet equations, ESR, DCR, switching losses, compensation, and saturation current before committing a design.</p>
+          </div>
+        </article>
+
+        <article class="card wide">
+          <div class="card-header">
+            <h3>Transformer Turns Ratio & Reflected Load</h3>
+            <p>Ideal transformer relationships for voltage, current, VA, and impedance reflection.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid three">
+              <label class="field">Primary turns Np
+                <span class="entry"><input id="xfmr_np" value="100" inputmode="decimal"><select class="unit" id="xfmr_np_unit"><option value="1" selected>turns</option></select></span>
+              </label>
+              <label class="field">Secondary turns Ns
+                <span class="entry"><input id="xfmr_ns" value="20" inputmode="decimal"><select class="unit" id="xfmr_ns_unit"><option value="1" selected>turns</option></select></span>
+              </label>
+              <label class="field">Primary voltage Vp
+                <span class="entry"><input id="xfmr_vp" value="120" inputmode="decimal"><select class="unit" id="xfmr_vp_unit"><option value="1" selected>Vrms</option><option value="1e3">kVrms</option></select></span>
+              </label>
+              <label class="field">Load on secondary RL
+                <span class="entry"><input id="xfmr_rl" value="10" inputmode="decimal"><select class="unit" id="xfmr_rl_unit"><option value="1" selected>Ω</option><option value="1e3">kΩ</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="xfmr_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>Vs / Vp = Ns / Np</span>
+                <span>Ip / Is = Ns / Np</span>
+                <span>Zreflected to primary = (Np / Ns)² · Zload</span>
+                <span>VAideal = Vp · Ip = Vs · Is</span>
+              </div>
+            </details>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-pcb">
+      <div class="section-head">
+        <div>
+          <h2>PCB, RF & Digital</h2>
+          <p>Trace resistance, microstrip impedance, wavelength, ADC resolution, and acquisition-time checks.</p>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <div class="card-header">
+            <h3>PCB Copper Trace Resistance</h3>
+            <p>Approximate DC resistance using copper thickness in oz/ft² and temperature correction.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Trace length
+                <span class="entry"><input id="trace_len" value="50" inputmode="decimal"><select class="unit" id="trace_len_unit"><option value="1e-3" selected>mm</option><option value="0.0254">in</option><option value="1">m</option></select></span>
+              </label>
+              <label class="field">Trace width
+                <span class="entry"><input id="trace_w" value="0.25" inputmode="decimal"><select class="unit" id="trace_w_unit"><option value="1e-3" selected>mm</option><option value="0.0254">in</option><option value="1e-6">µm</option></select></span>
+              </label>
+              <label class="field">Copper weight
+                <span class="entry"><input id="trace_oz" value="1" inputmode="decimal"><select class="unit" id="trace_oz_unit"><option value="1" selected>oz</option></select></span>
+              </label>
+              <label class="field">Temperature
+                <span class="entry"><input id="trace_temp" value="25" inputmode="decimal"><select class="unit" id="trace_temp_unit"><option value="1" selected>°C</option></select></span>
+              </label>
+              <label class="field">Current optional
+                <span class="entry"><input id="trace_i" value="1" inputmode="decimal"><select class="unit" id="trace_i_unit"><option value="1" selected>A</option><option value="1e-3">mA</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="trace_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>1 oz copper thickness ≈ 34.8 µm</span>
+                <span>ρ(T) = ρ20 · [1 + α(T − 20°C)],  ρ20 ≈ 1.724e−8 Ω·m, α ≈ 0.00393/°C</span>
+                <span>R = ρL / A = ρL / (width · thickness)</span>
+                <span>Voltage drop = I · R,  Copper loss = I²R</span>
+              </div>
+            </details>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h3>Microstrip Impedance Approximation</h3>
+            <p>Thin-conductor quasi-static estimate for outer-layer microstrip.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Trace width W
+                <span class="entry"><input id="ms_w" value="0.3" inputmode="decimal"><select class="unit" id="ms_w_unit"><option value="1e-3" selected>mm</option><option value="0.0254">in</option><option value="1e-6">µm</option></select></span>
+              </label>
+              <label class="field">Dielectric height h
+                <span class="entry"><input id="ms_h" value="0.18" inputmode="decimal"><select class="unit" id="ms_h_unit"><option value="1e-3" selected>mm</option><option value="0.0254">in</option><option value="1e-6">µm</option></select></span>
+              </label>
+              <label class="field">Relative permittivity εr
+                <span class="entry"><input id="ms_er" value="4.2" inputmode="decimal"><select class="unit" id="ms_er_unit"><option value="1" selected>εr</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="microstrip_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>u = W/h</span>
+                <span>εeff ≈ (εr+1)/2 + (εr−1)/2 · [1/√(1+12/u)] with a small correction for u ≤ 1</span>
+                <span>u ≤ 1: Z0 ≈ (60/√εeff) · ln(8/u + 0.25u)</span>
+                <span>u > 1: Z0 ≈ 120π / [√εeff · (u + 1.393 + 0.667ln(u + 1.444))]</span>
+              </div>
+            </details>
+            <p class="hint small-warning">Use a field solver or board-house stack-up tool for production controlled-impedance work, especially with soldermask, copper roughness, differential pairs, or thick copper.</p>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h3>Wavelength / Propagation</h3>
+            <p>RF wavelength, quarter-wave length, period, and propagation delay.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">Frequency f
+                <span class="entry"><input id="wave_f" value="2.4" inputmode="decimal"><select class="unit" id="wave_f_unit"><option value="1">Hz</option><option value="1e3">kHz</option><option value="1e6">MHz</option><option value="1e9" selected>GHz</option></select></span>
+              </label>
+              <label class="field">Velocity factor VF
+                <span class="entry"><input id="wave_vf" value="0.67" inputmode="decimal"><select class="unit" id="wave_vf_unit"><option value="1" selected>ratio</option><option value="0.01">%</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="wave_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>c ≈ 299,792,458 m/s</span>
+                <span>λ0 = c / f</span>
+                <span>λmedium = VF · λ0</span>
+                <span>Quarter-wave = λmedium / 4</span>
+                <span>Delay per meter = 1 / (VF · c)</span>
+              </div>
+            </details>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h3>ADC Resolution & Acquisition Time</h3>
+            <p>Ideal LSB, code, quantization SNR, and source-R/sample-C settling estimate.</p>
+          </div>
+          <div class="card-body">
+            <div class="input-grid">
+              <label class="field">ADC bits N
+                <span class="entry"><input id="adc_bits" value="12" inputmode="decimal"><select class="unit" id="adc_bits_unit"><option value="1" selected>bits</option></select></span>
+              </label>
+              <label class="field">Reference voltage Vref
+                <span class="entry"><input id="adc_vref" value="3.3" inputmode="decimal"><select class="unit" id="adc_vref_unit"><option value="1" selected>V</option><option value="1e-3">mV</option></select></span>
+              </label>
+              <label class="field">Input voltage Vin
+                <span class="entry"><input id="adc_vin" value="1.65" inputmode="decimal"><select class="unit" id="adc_vin_unit"><option value="1" selected>V</option><option value="1e-3">mV</option></select></span>
+              </label>
+              <label class="field">Source resistance Rsource
+                <span class="entry"><input id="adc_r" value="10" inputmode="decimal"><select class="unit" id="adc_r_unit"><option value="1">Ω</option><option value="1e3" selected>kΩ</option><option value="1e6">MΩ</option></select></span>
+              </label>
+              <label class="field">Sample capacitance Csamp
+                <span class="entry"><input id="adc_c" value="20" inputmode="decimal"><select class="unit" id="adc_c_unit"><option value="1">F</option><option value="1e-9">nF</option><option value="1e-12" selected>pF</option></select></span>
+              </label>
+            </div>
+            <div class="result-box" id="adc_result"></div>
+            <details class="equations" open>
+              <summary>Equations used</summary>
+              <div class="eq">
+                <span>Codes = 2^N,  LSB = Vref / 2^N</span>
+                <span>Ideal code ≈ round(Vin / LSB), clipped to 0…2^N−1</span>
+                <span>Ideal quantization SNR ≈ 6.02N + 1.76 dB</span>
+                <span>τ = Rsource · Csamp</span>
+                <span>Settling to 0.5 LSB: tacq ≥ (N + 1)ln(2) · τ</span>
+              </div>
+            </details>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <footer>
+      Assumptions: most calculators use ideal component equations unless the section notes otherwise. Validate against tolerances, parasitics, component ratings, temperature limits, manufacturer data, and safety requirements before release or energizing hardware.
+    </footer>
+  </main>
+
+  <script>
+    'use strict';
+
+    const $ = (id) => document.getElementById(id);
+    const PI = Math.PI;
+    const C0 = 299792458;
+
+    function precision() {
+      const p = Number($('precision')?.value || 4);
+      return Number.isFinite(p) ? p : 4;
+    }
+
+    function parseEE(raw) {
+      const original = String(raw ?? '').trim();
+      if (!original) return { value: NaN, hasPrefix: false };
+      let s = original
+        .replace(/−/g, '-')
+        .replace(/,/g, '')
+        .replace(/µ/g, 'u')
+        .replace(/Ω|Ω/gi, '')
+        .replace(/ohms?|volts?|amps?|farads?|henrys?|hertz|hz|seconds?|secs?/gi, '')
+        .trim();
+      const match = s.match(/^([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*(meg|[fpnumkKMGTP]?)/);
+      if (!match) return { value: NaN, hasPrefix: false };
+      const number = Number(match[1]);
+      const suffix = match[2] || '';
+      const map = {
+        f: 1e-15, p: 1e-12, n: 1e-9, u: 1e-6,
+        m: 1e-3, k: 1e3, K: 1e3, M: 1e6, meg: 1e6,
+        G: 1e9, T: 1e12, P: 1e15
+      };
+      const mult = suffix ? map[suffix] : 1;
+      return { value: number * (mult || 1), hasPrefix: Boolean(suffix) };
+    }
+
+    function read(id) {
+      const el = $(id);
+      if (!el) return NaN;
+      const raw = String(el.value ?? '').trim();
+      if (!raw) return NaN;
+      const parsed = parseEE(raw);
+      if (!Number.isFinite(parsed.value)) return NaN;
+      const unit = $(id + '_unit');
+      const unitMult = parsed.hasPrefix ? 1 : Number(unit?.value ?? 1);
+      return parsed.value * unitMult;
+    }
+
+    function rawFilled(id) {
+      const el = $(id);
+      return Boolean(el && String(el.value ?? '').trim() !== '' && Number.isFinite(read(id)));
+    }
+
+    function parseList(text) {
+      return String(text ?? '')
+        .split(/[\s,;]+/)
+        .map(v => v.trim())
+        .filter(Boolean)
+        .map(v => parseEE(v).value)
+        .filter(v => Number.isFinite(v) && v > 0);
+    }
+
+    function sig(x, p = precision()) {
+      if (!Number.isFinite(x)) return '—';
+      if (x === 0) return '0';
+      const abs = Math.abs(x);
+      if (abs >= 1e5 || abs < 1e-3) return x.toExponential(Math.max(0, p - 1)).replace(/e\+?/, 'e');
+      return Number(x.toPrecision(p)).toString();
+    }
+
+    function fmt(x, unit = '', p = precision()) {
+      if (!Number.isFinite(x)) return '—';
+      if (unit === 'dB') return `${sig(x, p)} dB`;
+      if (unit === '°') return `${sig(x, p)}°`;
+      if (unit === '%') return `${sig(x, p)} %`;
+      if (x === 0) return `0${unit ? ' ' + unit : ''}`;
+      const prefixes = [
+        [-15, 'f'], [-12, 'p'], [-9, 'n'], [-6, 'µ'], [-3, 'm'],
+        [0, ''], [3, 'k'], [6, 'M'], [9, 'G'], [12, 'T']
+      ];
+      const abs = Math.abs(x);
+      let exp = Math.floor(Math.log10(abs) / 3) * 3;
+      exp = Math.max(-15, Math.min(12, exp));
+      const pair = prefixes.find(v => v[0] === exp) || [0, ''];
+      const scaled = x / Math.pow(10, pair[0]);
+      return `${sig(scaled, p)} ${pair[1]}${unit}`.trim();
+    }
+
+    function plain(x, suffix = '', p = precision()) {
+      return Number.isFinite(x) ? `${sig(x, p)}${suffix}` : '—';
+    }
+
+    function db(x) {
+      return Number.isFinite(x) ? fmt(x, 'dB') : '—';
+    }
+
+    function pct(x) {
+      return Number.isFinite(x) ? fmt(100 * x, '%') : '—';
+    }
+
+    function angleRadToDeg(rad) {
+      return rad * 180 / PI;
+    }
+
+    function gainDb(gain) {
+      return gain > 0 ? 20 * Math.log10(gain) : NaN;
+    }
+
+    function row(label, value, note = '') {
+      return `<tr><th>${label}</th><td>${value}</td><td class="note">${note}</td></tr>`;
+    }
+
+    function rows(items) {
+      return `<table class="result-table"><tbody>${items.join('')}</tbody></table>`;
+    }
+
+    function empty(msg = 'Enter valid positive inputs to calculate.') {
+      return `<div class="empty">${msg}</div>`;
+    }
+
+    function setResult(id, html) {
+      const el = $(id);
+      if (el) el.innerHTML = html;
+    }
+
+    function parallel2(a, b) {
+      if (!Number.isFinite(a) || !Number.isFinite(b) || a <= 0 || b <= 0) return NaN;
+      return 1 / (1 / a + 1 / b);
+    }
+
+    function calcOhm() {
+      const hasV = rawFilled('ohm_v');
+      const hasI = rawFilled('ohm_i');
+      const hasR = rawFilled('ohm_r');
+      let V = read('ohm_v'), I = read('ohm_i'), R = read('ohm_r');
+      const count = [hasV, hasI, hasR].filter(Boolean).length;
+      if (count < 2) return setResult('ohm_result', empty('Enter any two values; leave the unknown blank.'));
+      let note = '';
+      if (!hasV && hasI && hasR) { V = I * R; note = 'Solved V from I·R'; }
+      if (!hasI && hasV && hasR) { I = V / R; note = 'Solved I from V/R'; }
+      if (!hasR && hasV && hasI) { R = V / I; note = 'Solved R from V/I'; }
+      const P = V * I;
+      const list = [
+        row('Voltage', fmt(V, 'V'), hasV ? 'entered' : note),
+        row('Current', fmt(I, 'A'), hasI ? 'entered' : note),
+        row('Resistance', fmt(R, 'Ω'), hasR ? 'entered' : note),
+        row('Power', fmt(P, 'W'), 'positive sign assumes passive load convention')
+      ];
+      if (hasV && hasI && hasR && I !== 0) {
+        const expectedR = V / I;
+        const err = (R - expectedR) / expectedR;
+        list.push(row('Consistency check', pct(err), 'R compared with V/I'));
+      }
+      setResult('ohm_result', rows(list));
+    }
+
+    function calcDivider() {
+      const Vin = read('div_vin'), R1 = read('div_r1'), R2 = read('div_r2'), RL = read('div_rl');
+      if (!(Vin >= 0 || Vin < 0) || !(R1 > 0) || !(R2 > 0)) return setResult('divider_result', empty('Vin, R1, and R2 are required.'));
+      const Vout = Vin * R2 / (R1 + R2);
+      const Rth = parallel2(R1, R2);
+      const Idiv = Vin / (R1 + R2);
+      const list = [
+        row('Unloaded Vout', fmt(Vout, 'V'), 'divider only'),
+        row('Divider current', fmt(Idiv, 'A'), 'no load attached'),
+        row('Thevenin resistance', fmt(Rth, 'Ω'), 'looking back into divider output')
+      ];
+      if (RL > 0) {
+        const lower = parallel2(R2, RL);
+        const loaded = Vin * lower / (R1 + lower);
+        const loadI = loaded / RL;
+        list.push(row('Loaded lower leg', fmt(lower, 'Ω'), 'R2 ∥ RL'));
+        list.push(row('Loaded Vout', fmt(loaded, 'V'), 'with load attached'));
+        list.push(row('Load current', fmt(loadI, 'A'), 'loaded Vout / RL'));
+        list.push(row('Loading error', pct((loaded - Vout) / Vout), 'relative to unloaded output'));
+      }
+      setResult('divider_result', rows(list));
+    }
+
+    function calcRNet() {
+      const values = parseList($('rnet_values')?.value);
+      if (!values.length) return setResult('rnet_result', empty('Enter at least one positive resistor value.'));
+      const series = values.reduce((a, b) => a + b, 0);
+      const parallel = 1 / values.reduce((a, r) => a + 1 / r, 0);
+      const conductance = 1 / parallel;
+      setResult('rnet_result', rows([
+        row('Count', plain(values.length), 'valid positive values parsed'),
+        row('Series equivalent', fmt(series, 'Ω'), 'sum of all resistors'),
+        row('Parallel equivalent', fmt(parallel, 'Ω'), 'reciprocal of summed conductance'),
+        row('Total conductance', fmt(conductance, 'S'), 'for parallel network')
+      ]));
+    }
+
+    function calcReactance() {
+      const f = read('x_f'), C = read('x_c'), L = read('x_l'), R = read('x_r');
+      if (!(f > 0)) return setResult('reactance_result', empty('Frequency is required.'));
+      const w = 2 * PI * f;
+      const list = [row('Angular frequency ω', fmt(w, 'rad/s'), '2πf')];
+      if (C > 0) {
+        const Xc = 1 / (w * C);
+        list.push(row('|Xc|', fmt(Xc, 'Ω'), 'capacitive reactance magnitude'));
+        if (R > 0) list.push(row('RC time constant', fmt(R * C, 's'), 'τ = RC'));
+      }
+      if (L > 0) {
+        const Xl = w * L;
+        list.push(row('XL', fmt(Xl, 'Ω'), 'inductive reactance'));
+        if (R > 0) list.push(row('RL time constant', fmt(L / R, 's'), 'τ = L/R'));
+      }
+      if (C > 0 && L > 0) {
+        const f0 = 1 / (2 * PI * Math.sqrt(L * C));
+        list.push(row('LC resonance', fmt(f0, 'Hz'), 'ignores ESR and loading'));
+      }
+      setResult('reactance_result', rows(list));
+    }
+
+    function calcRLC() {
+      const f = read('rlc_f'), V = read('rlc_v'), R = read('rlc_r'), L = read('rlc_l'), C = read('rlc_c');
+      if (!(f > 0) || !(R >= 0) || !(L > 0) || !(C > 0)) return setResult('rlc_result', empty('Frequency, R, L, and C are required.'));
+      const w = 2 * PI * f;
+      const XL = w * L;
+      const XC = 1 / (w * C);
+      const X = XL - XC;
+      const Z = Math.hypot(R, X);
+      const phase = angleRadToDeg(Math.atan2(X, R));
+      const list = [
+        row('XL', fmt(XL, 'Ω'), 'inductor'),
+        row('|Xc|', fmt(XC, 'Ω'), 'capacitor magnitude'),
+        row('Net reactance', fmt(X, 'Ω'), X >= 0 ? 'inductive net' : 'capacitive net'),
+        row('Complex Z', `${fmt(R, 'Ω')} ${X >= 0 ? '+' : '−'} j${fmt(Math.abs(X), 'Ω')}`, 'series branch'),
+        row('|Z|', fmt(Z, 'Ω'), 'magnitude'),
+        row('Phase angle', fmt(phase, '°'), 'current lags for positive phase')
+      ];
+      if (V > 0) list.push(row('RMS current', fmt(V / Z, 'A'), 'Vrms / |Z|'));
+      const f0 = 1 / (2 * PI * Math.sqrt(L * C));
+      const w0 = 2 * PI * f0;
+      const Q = R > 0 ? w0 * L / R : NaN;
+      list.push(row('Resonant frequency', fmt(f0, 'Hz'), 'LC resonance'));
+      if (Q > 0) list.push(row('Series Q', plain(Q), 'ω0L/R'));
+      setResult('rlc_result', rows(list));
+    }
+
+    function calcFilters() {
+      const f = read('filter_f'), R = read('filter_r'), C = read('filter_c'), L = read('filter_l');
+      if (!(f > 0) || !(R > 0)) return setResult('filter_result', empty('Frequency and resistance are required.'));
+      const list = [];
+      if (C > 0) {
+        const fc = 1 / (2 * PI * R * C);
+        const x = f / fc;
+        const lp = 1 / Math.sqrt(1 + x * x);
+        const hp = x / Math.sqrt(1 + x * x);
+        list.push(row('RC cutoff fc', fmt(fc, 'Hz'), '1/(2πRC)'));
+        list.push(row('RC time constant τ', fmt(R * C, 's'), 'RC'));
+        list.push(row('RC low-pass gain', `${plain(lp)} (${db(gainDb(lp))})`, `phase ${fmt(-angleRadToDeg(Math.atan(x)), '°')}`));
+        list.push(row('RC high-pass gain', `${plain(hp)} (${db(gainDb(hp))})`, `phase ${fmt(90 - angleRadToDeg(Math.atan(x)), '°')}`));
+      }
+      if (L > 0) {
+        const fc = R / (2 * PI * L);
+        const x = f / fc;
+        const lp = 1 / Math.sqrt(1 + x * x);
+        const hp = x / Math.sqrt(1 + x * x);
+        list.push(row('RL cutoff fc', fmt(fc, 'Hz'), 'R/(2πL)'));
+        list.push(row('RL time constant τ', fmt(L / R, 's'), 'L/R'));
+        list.push(row('RL low-pass across R', `${plain(lp)} (${db(gainDb(lp))})`, `phase ${fmt(-angleRadToDeg(Math.atan(x)), '°')}`));
+        list.push(row('RL high-pass across L', `${plain(hp)} (${db(gainDb(hp))})`, `phase ${fmt(90 - angleRadToDeg(Math.atan(x)), '°')}`));
+      }
+      setResult('filter_result', list.length ? rows(list) : empty('Enter C and/or L for filter calculations.'));
+    }
+
+    function calcBandpass() {
+      const f = read('bp_f'), R = read('bp_r'), L = read('bp_l'), C = read('bp_c');
+      if (!(f > 0) || !(R > 0) || !(L > 0) || !(C > 0)) return setResult('bp_result', empty('Frequency, R, L, and C are required.'));
+      const w = 2 * PI * f;
+      const f0 = 1 / (2 * PI * Math.sqrt(L * C));
+      const w0 = 2 * PI * f0;
+      const Q = w0 * L / R;
+      const BW = f0 / Q;
+      const X = w * L - 1 / (w * C);
+      const H = R / Math.hypot(R, X);
+      const phase = -angleRadToDeg(Math.atan2(X, R));
+      setResult('bp_result', rows([
+        row('Resonant frequency f0', fmt(f0, 'Hz'), 'center frequency'),
+        row('Q', plain(Q), 'series RLC, output across R'),
+        row('Bandwidth', fmt(BW, 'Hz'), 'f0/Q'),
+        row('|H| at test f', `${plain(H)} (${db(gainDb(H))})`, 'voltage gain across R'),
+        row('Phase of H', fmt(phase, '°'), 'relative output across R')
+      ]));
+    }
+
+    function calc555() {
+      const RA = read('t555_ra'), RB = read('t555_rb'), C = read('t555_c');
+      if (!(RA > 0) || !(RB > 0) || !(C > 0)) return setResult('t555_result', empty('RA, RB, and C are required.'));
+      const thigh = 0.693 * (RA + RB) * C;
+      const tlow = 0.693 * RB * C;
+      const period = thigh + tlow;
+      const freq = 1 / period;
+      const duty = thigh / period;
+      setResult('t555_result', rows([
+        row('High time', fmt(thigh, 's'), 'output high'),
+        row('Low time', fmt(tlow, 's'), 'output low'),
+        row('Period', fmt(period, 's'), 'full cycle'),
+        row('Frequency', fmt(freq, 'Hz'), '1/T'),
+        row('Duty cycle', pct(duty), 'tHIGH/T')
+      ]));
+    }
+
+    function calcDB() {
+      const V1 = read('db_v1'), V2 = read('db_v2'), R = read('db_r'), dbmIn = read('db_dbm');
+      const list = [];
+      if (V1 > 0 && V2 > 0) {
+        const gdB = 20 * Math.log10(V2 / V1);
+        list.push(row('Voltage gain', plain(V2 / V1), 'V2/V1'));
+        list.push(row('Voltage gain dB', db(gdB), '20log10(V2/V1)'));
+      }
+      if (V2 > 0) {
+        list.push(row('V2 dBV', db(20 * Math.log10(V2 / 1)), 'reference 1 Vrms'));
+        list.push(row('V2 dBu', db(20 * Math.log10(V2 / 0.775)), 'reference 0.775 Vrms'));
+      }
+      if (V2 > 0 && R > 0) {
+        const P = V2 * V2 / R;
+        list.push(row('Power from V2/R', fmt(P, 'W'), 'Vrms²/R'));
+        list.push(row('Power level', db(10 * Math.log10(P / 0.001)), 'dBm'));
+      }
+      if (Number.isFinite(dbmIn) && R > 0) {
+        const P = 0.001 * Math.pow(10, dbmIn / 10);
+        const Vrms = Math.sqrt(P * R);
+        list.push(row('Power from dBm', fmt(P, 'W'), '0.001·10^(dBm/10)'));
+        list.push(row('Vrms from dBm', fmt(Vrms, 'V'), 'for specified load'));
+      }
+      setResult('db_result', list.length ? rows(list) : empty('Enter voltage and/or dBm inputs.'));
+    }
+
+    function calcSine() {
+      const mode = $('sig_mode')?.value || 'vpp';
+      const val = read('sig_value');
+      const R = read('sig_r');
+      if (!(val > 0)) return setResult('sig_result', empty('Enter a positive amplitude.'));
+      let Vp;
+      if (mode === 'vpp') Vp = val / 2;
+      if (mode === 'vp') Vp = val;
+      if (mode === 'vrms') Vp = val * Math.sqrt(2);
+      const Vpp = 2 * Vp;
+      const Vrms = Vp / Math.sqrt(2);
+      const VavgRect = 2 * Vp / PI;
+      const list = [
+        row('Vpeak', fmt(Vp, 'V'), 'sine amplitude'),
+        row('Vpp', fmt(Vpp, 'V'), 'peak-to-peak'),
+        row('Vrms', fmt(Vrms, 'V'), 'sine RMS'),
+        row('Rectified average', fmt(VavgRect, 'V'), 'full-wave average')
+      ];
+      if (R > 0) list.push(row('Average power', fmt(Vrms * Vrms / R, 'W'), 'resistive load'));
+      setResult('sig_result', rows(list));
+    }
+
+    function calcOpamp() {
+      const Rf = read('op_rf'), Rg = read('op_rg'), Vin = read('op_vin'), GBW = read('op_gbw'), slew = read('op_slew');
+      if (!(Rf > 0) || !(Rg > 0)) return setResult('opamp_result', empty('Rf and Rin/Rg are required.'));
+      const avInv = -Rf / Rg;
+      const noiseGain = 1 + Rf / Rg;
+      const avNon = noiseGain;
+      const list = [
+        row('Inverting gain', plain(avInv), '−Rf/Rin'),
+        row('Non-inverting gain', plain(avNon), '1 + Rf/Rg'),
+        row('Noise gain', plain(noiseGain), 'used for bandwidth estimate')
+      ];
+      if (Number.isFinite(Vin)) {
+        const outInv = avInv * Vin;
+        const outNon = avNon * Vin;
+        list.push(row('Inverting Vout', fmt(outInv, 'V'), 'ideal, unclipped'));
+        list.push(row('Non-inverting Vout', fmt(outNon, 'V'), 'ideal, unclipped'));
+        if (slew > 0) {
+          const maxVp = Math.max(Math.abs(outInv), Math.abs(outNon));
+          if (maxVp > 0) list.push(row('Full-power BW estimate', fmt(slew / (2 * PI * maxVp), 'Hz'), 'from slew rate and largest output peak'));
+        }
+      }
+      if (GBW > 0) {
+        list.push(row('Inverting bandwidth ≈', fmt(GBW / noiseGain, 'Hz'), 'GBW / noise gain'));
+        list.push(row('Non-inverting bandwidth ≈', fmt(GBW / avNon, 'Hz'), 'GBW / closed-loop gain'));
+      }
+      setResult('opamp_result', rows(list));
+    }
+
+    function calcEnergy() {
+      const C = read('energy_c'), V = read('energy_v'), L = read('energy_l'), I = read('energy_i');
+      const list = [];
+      if (C > 0 && Number.isFinite(V)) {
+        list.push(row('Capacitor energy', fmt(0.5 * C * V * V, 'J'), '1/2CV²'));
+        list.push(row('Stored charge', fmt(C * V, 'C'), 'Q = CV'));
+      }
+      if (L > 0 && Number.isFinite(I)) {
+        list.push(row('Inductor energy', fmt(0.5 * L * I * I, 'J'), '1/2LI²'));
+        list.push(row('Flux linkage estimate', fmt(L * I, 'Wb-turn'), 'λ = LI'));
+      }
+      setResult('energy_result', list.length ? rows(list) : empty('Enter C/V and/or L/I.'));
+    }
+
+    function calcSwitcher() {
+      const mode = $('sw_mode')?.value || 'buck';
+      const Vin = read('sw_vin'), Vout = read('sw_vout'), Iout = read('sw_iout'), L = read('sw_l'), C = read('sw_c'), fsw = read('sw_f');
+      let eff = read('sw_eff');
+      if (eff > 1) eff /= 100;
+      if (!(Vin > 0) || !(Vout > 0) || !(Iout >= 0) || !(L > 0) || !(C > 0) || !(fsw > 0)) return setResult('switcher_result', empty('Vin, Vout, Iout, L, C, and fsw are required.'));
+      if (!(eff > 0 && eff <= 1)) eff = 1;
+      let D, dIL, dV, valid = true;
+      if (mode === 'buck') {
+        D = Vout / Vin;
+        dIL = (Vin - Vout) * D / (L * fsw);
+        dV = dIL / (8 * fsw * C);
+        if (D <= 0 || D >= 1 || dIL < 0) valid = false;
+      } else {
+        D = 1 - Vin / Vout;
+        dIL = Vin * D / (L * fsw);
+        dV = Iout * D / (fsw * C);
+        if (D <= 0 || D >= 1 || dIL < 0) valid = false;
+      }
+      const Pout = Vout * Iout;
+      const Iin = Pout / (eff * Vin);
+      const list = [
+        row('Duty cycle', pct(D), valid ? 'ideal CCM estimate' : 'check topology/input-output relationship'),
+        row('Output power', fmt(Pout, 'W'), 'Vout·Iout'),
+        row('Input current estimate', fmt(Iin, 'A'), 'includes entered efficiency'),
+        row('Inductor ripple ΔIL', fmt(Math.abs(dIL), 'A'), 'peak-to-peak estimate'),
+        row('Ripple ratio ΔIL/Iout', Iout > 0 ? pct(Math.abs(dIL) / Iout) : '—', 'rough CCM sanity check'),
+        row('Capacitor ripple ΔVout', fmt(Math.abs(dV), 'V'), mode === 'buck' ? 'ideal triangular ripple, ESR ignored' : 'boost output cap estimate, ESR ignored')
+      ];
+      setResult('switcher_result', rows(list));
+    }
+
+    function calcTransformer() {
+      const Np = read('xfmr_np'), Ns = read('xfmr_ns'), Vp = read('xfmr_vp'), RL = read('xfmr_rl');
+      if (!(Np > 0) || !(Ns > 0) || !(Vp >= 0 || Vp < 0)) return setResult('xfmr_result', empty('Np, Ns, and Vp are required.'));
+      const ratio = Ns / Np;
+      const Vs = Vp * ratio;
+      const list = [
+        row('Turns ratio Ns/Np', plain(ratio), 'secondary to primary'),
+        row('Secondary voltage Vs', fmt(Vs, 'V'), 'ideal RMS')
+      ];
+      if (RL > 0) {
+        const Is = Vs / RL;
+        const Ip = Is * ratio;
+        const Zref = RL * Math.pow(Np / Ns, 2);
+        list.push(row('Secondary current', fmt(Is, 'A'), 'Vs/RL'));
+        list.push(row('Primary current', fmt(Ip, 'A'), 'ideal current ratio'));
+        list.push(row('Reflected primary load', fmt(Zref, 'Ω'), '(Np/Ns)²·RL'));
+        list.push(row('Ideal VA', fmt(Math.abs(Vs * Is), 'VA'), 'same on both sides, loss ignored'));
+      }
+      setResult('xfmr_result', rows(list));
+    }
+
+    function calcTrace() {
+      const length = read('trace_len'), width = read('trace_w'), oz = read('trace_oz'), temp = read('trace_temp'), I = read('trace_i');
+      if (!(length > 0) || !(width > 0) || !(oz > 0)) return setResult('trace_result', empty('Length, width, and copper weight are required.'));
+      const rho20 = 1.724e-8;
+      const alpha = 0.00393;
+      const rho = rho20 * (1 + alpha * ((Number.isFinite(temp) ? temp : 20) - 20));
+      const thickness = oz * 34.8e-6;
+      const area = width * thickness;
+      const R = rho * length / area;
+      const list = [
+        row('Copper thickness', fmt(thickness, 'm'), '34.8 µm per oz'),
+        row('Cross-section area', plain(area * 1e6, ' mm²'), 'width · thickness'),
+        row('Trace resistance', fmt(R, 'Ω'), 'DC estimate')
+      ];
+      if (I > 0) {
+        list.push(row('Voltage drop', fmt(I * R, 'V'), 'I·R'));
+        list.push(row('Copper loss', fmt(I * I * R, 'W'), 'I²R'));
+      }
+      setResult('trace_result', rows(list));
+    }
+
+    function calcMicrostrip() {
+      const W = read('ms_w'), h = read('ms_h'), er = read('ms_er');
+      if (!(W > 0) || !(h > 0) || !(er > 1)) return setResult('microstrip_result', empty('W, h, and εr > 1 are required.'));
+      const u = W / h;
+      let eeff = (er + 1) / 2 + (er - 1) / 2 * (1 / Math.sqrt(1 + 12 / u));
+      if (u <= 1) eeff += (er - 1) / 2 * 0.04 * Math.pow(1 - u, 2);
+      let z0;
+      if (u <= 1) z0 = (60 / Math.sqrt(eeff)) * Math.log(8 / u + 0.25 * u);
+      else z0 = (120 * PI) / (Math.sqrt(eeff) * (u + 1.393 + 0.667 * Math.log(u + 1.444)));
+      const vp = C0 / Math.sqrt(eeff);
+      setResult('microstrip_result', rows([
+        row('W/h ratio', plain(u), 'geometry ratio'),
+        row('Effective ε', plain(eeff), 'quasi-static approximation'),
+        row('Characteristic Z0', fmt(z0, 'Ω'), 'single-ended microstrip'),
+        row('Propagation velocity', fmt(vp, 'm/s'), 'c/√εeff'),
+        row('Delay', fmt(1 / vp, 's/m'), 'per meter')
+      ]));
+    }
+
+    function calcWave() {
+      const f = read('wave_f');
+      let vf = read('wave_vf');
+      if (vf > 1) vf /= 100;
+      if (!(f > 0) || !(vf > 0)) return setResult('wave_result', empty('Frequency and velocity factor are required.'));
+      const lambda0 = C0 / f;
+      const lambda = vf * lambda0;
+      setResult('wave_result', rows([
+        row('Free-space wavelength', fmt(lambda0, 'm'), 'c/f'),
+        row('Medium wavelength', fmt(lambda, 'm'), 'VF·λ0'),
+        row('Quarter-wave length', fmt(lambda / 4, 'm'), 'λ/4'),
+        row('Period', fmt(1 / f, 's'), '1/f'),
+        row('Delay per meter', fmt(1 / (vf * C0), 's/m'), '1/(VF·c)')
+      ]));
+    }
+
+    function calcADC() {
+      const bitsRaw = read('adc_bits'), Vref = read('adc_vref'), Vin = read('adc_vin'), R = read('adc_r'), C = read('adc_c');
+      const N = Math.round(bitsRaw);
+      if (!(N > 0) || !(Vref > 0)) return setResult('adc_result', empty('Bits and Vref are required.'));
+      const codes = Math.pow(2, N);
+      const lsb = Vref / codes;
+      const code = Number.isFinite(Vin) ? Math.max(0, Math.min(codes - 1, Math.round(Vin / lsb))) : NaN;
+      const list = [
+        row('Codes', plain(codes), '2^N'),
+        row('LSB size', fmt(lsb, 'V'), 'Vref/2^N'),
+        row('Ideal SNR', db(6.02 * N + 1.76), 'quantization-limited sine input')
+      ];
+      if (Number.isFinite(code)) list.push(row('Ideal code', plain(code), `0 to ${codes - 1}`));
+      if (R > 0 && C > 0) {
+        const tau = R * C;
+        const tacq = (N + 1) * Math.log(2) * tau;
+        list.push(row('Input RC τ', fmt(tau, 's'), 'Rsource·Csamp'));
+        list.push(row('0.5 LSB acquisition time', fmt(tacq, 's'), '(N+1)ln(2)·τ'));
+      }
+      setResult('adc_result', rows(list));
+    }
+
+    function calcAll() {
+      calcOhm();
+      calcDivider();
+      calcRNet();
+      calcReactance();
+      calcRLC();
+      calcFilters();
+      calcBandpass();
+      calc555();
+      calcDB();
+      calcSine();
+      calcOpamp();
+      calcEnergy();
+      calcSwitcher();
+      calcTransformer();
+      calcTrace();
+      calcMicrostrip();
+      calcWave();
+      calcADC();
+    }
+
+    function activePanel() {
+      return document.querySelector('.tab-panel.active');
+    }
+
+    function activateTab(name) {
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.toggle('active', panel.id === `tab-${name}`));
+      localStorage.setItem('eeCalcActiveTab', name);
+    }
+
+    function clearActiveInputs() {
+      const panel = activePanel();
+      if (!panel) return;
+      panel.querySelectorAll('input, textarea').forEach(el => { el.value = ''; });
+      calcAll();
+    }
+
+    async function copyActiveResults() {
+      const panel = activePanel();
+      if (!panel) return;
+      const title = panel.querySelector('h2')?.textContent || 'EE calculator results';
+      const text = `${title}\n\n` + Array.from(panel.querySelectorAll('.card')).map(card => {
+        const h = card.querySelector('h3')?.textContent || '';
+        const result = card.querySelector('.result-box')?.innerText.trim() || '';
+        return result ? `${h}\n${result}` : '';
+      }).filter(Boolean).join('\n\n');
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = $('copyResults');
+        const old = btn.textContent;
+        btn.textContent = 'Copied results';
+        setTimeout(() => btn.textContent = old, 1000);
+      } catch (err) {
+        alert(text);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('input, textarea, select').forEach(el => el.addEventListener('input', calcAll));
+      document.querySelectorAll('select').forEach(el => el.addEventListener('change', calcAll));
+      document.querySelectorAll('.tab-button').forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
+      $('clearTab')?.addEventListener('click', clearActiveInputs);
+      $('copyResults')?.addEventListener('click', copyActiveResults);
+      const savedTab = localStorage.getItem('eeCalcActiveTab');
+      if (savedTab && $(`tab-${savedTab}`)) activateTab(savedTab);
+      calcAll();
+    });
+  </script>
+</body>
+</html>
